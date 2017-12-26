@@ -1,0 +1,9 @@
+[package]
+name = "hw02"
+version = "0.1.0"
+authors = ["Newton Ni <nwtnni@gmail.com>"]
+
+[profile.test]
+opt-level = 3
+
+[dependencies]
