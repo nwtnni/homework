@@ -1,3 +1,5 @@
+use std::vec;
+
 #[derive(Default, Debug)]
 pub struct BST<T> {
     root: Link<T>,
@@ -17,7 +19,7 @@ enum Way { Left, Right }
 
 impl<T> Node<T> where T: PartialOrd + Ord {
     pub fn new(value: T) -> Self {
-        Node { value, left: None, right: None } 
+        Node { value, left: None, right: None }
     }
 
     pub fn insert(&mut self, way: Way, value: T) {
@@ -62,35 +64,60 @@ impl<T> BST<T> where T: PartialOrd + Ord {
     }
 
     pub fn search(&self, value: &T) -> bool {
-        let mut node = &self.root; 
+        let mut node = &self.root;
         while let Some(ref boxed) = *node {
             let next = &(*boxed);
             if next.value < *value {
-                node = &next.left; 
+                node = &next.left;
             } else if next.value > *value {
-                node = &next.right; 
+                node = &next.right;
             } else {
-                return true; 
+                return true;
             }
         }
         false
     }
 }
 
+impl<T> IntoIterator for BST<T> where T: PartialOrd + Ord {
+    type Item = T;
+    type IntoIter = vec::IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let mut values: Vec<T> = Vec::new();
+        let mut stack: Vec<Link<T>> = Vec::new();
+        stack.push(self.root);
+
+        loop {
+            match stack.pop() {
+                Some(Some(boxed)) => {
+                    values.push(boxed.value);
+                    stack.push(boxed.left);
+                    stack.push(boxed.right);
+                },
+                Some(None) => continue,
+                None => break,
+            } 
+        }
+        values.sort_unstable();
+        values.into_iter()
+    }
+}
+
 mod tests {
     #![cfg(test)]
+    use rand::{thread_rng, Rng};
 
     use super::*;
 
     #[test]
     fn test_empty() {
-        let bst: BST = Default::default();
-        assert_eq!(bst.length(), 0);
+        let _bst: BST<i32> = Default::default();
     }
 
     #[test]
     fn test_insert() {
-        let mut bst: BST = Default::default(); 
+        let mut bst: BST<i32> = Default::default();
         for i in 0..10000 {
             bst.insert(i);
         }
@@ -98,19 +125,36 @@ mod tests {
 
     #[test]
     fn test_search() {
-        let mut bst: BST = Default::default();
+        let mut bst: BST<i32> = Default::default();
         for i in 0..10000 {
             bst.insert(i);
-            assert_eq!(bst.search(i), true);
+            assert_eq!(bst.search(&i), true);
         }
     }
 
     #[test]
     fn test_negative() {
-        let mut bst: BST = Default::default();
+        let mut bst: BST<i32> = Default::default();
         for i in 0..10000 {
             bst.insert(i);
-            assert_eq!(bst.search(i + 1), false);
+            assert_eq!(bst.search(&(i + 1)), false);
+        }
+    }
+
+    #[test]
+    fn test_into_iter() {
+        let mut bst: BST<i32> = Default::default(); 
+        let mut vec: Vec<i32> = (0..10).collect();
+        let slice = vec.as_mut_slice();
+        thread_rng().shuffle(slice);
+
+        for i in vec.into_iter() {
+            bst.insert(i);
+        }
+        let mut n = 0;
+        for i in bst.into_iter() {
+            assert_eq!(i, n);
+            n += 1;
         }
     }
 }
