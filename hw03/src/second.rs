@@ -104,6 +104,56 @@ impl<T> IntoIterator for BST<T> where T: PartialOrd + Ord {
     }
 }
 
+impl<'a, T> IntoIterator for &'a mut BST<T> where T: PartialOrd + Ord {
+    type Item = &'a mut T;
+    type IntoIter = vec::IntoIter<&'a mut T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let mut values: Vec<&'a mut T> = Vec::new();
+        let mut stack: Vec<&'a mut Link<T>> = Vec::new();
+        stack.push(&mut self.root);
+
+        loop {
+            match stack.pop() {
+                Some(&mut Some(ref mut boxed)) => {
+                    values.push(&mut boxed.value);
+                    stack.push(&mut boxed.left);
+                    stack.push(&mut boxed.right);
+                },
+                Some(&mut None) => continue,
+                None => break,
+            } 
+        }
+        values.sort_unstable();
+        values.into_iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a BST<T> where T: PartialOrd + Ord {
+    type Item = &'a T;
+    type IntoIter = vec::IntoIter<&'a T>;
+    
+    fn into_iter(self) -> Self::IntoIter {
+        let mut values: Vec<&'a T>  = Vec::new();
+        let mut stack: Vec<&'a Link<T>> = Vec::new();
+        stack.push(&self.root);
+
+        loop {
+            match stack.pop() {
+                Some(&Some(ref boxed)) => {
+                    values.push(&boxed.value);
+                    stack.push(&boxed.left);
+                    stack.push(&boxed.right);
+                },
+                Some(&None) => continue,
+                None => break,
+            } 
+        }
+        values.sort_unstable();
+        values.into_iter()
+    }
+}
+
 mod tests {
     #![cfg(test)]
     use rand::{thread_rng, Rng};
@@ -144,7 +194,7 @@ mod tests {
     #[test]
     fn test_into_iter() {
         let mut bst: BST<i32> = Default::default(); 
-        let mut vec: Vec<i32> = (0..10).collect();
+        let mut vec: Vec<i32> = (0..100000).collect();
         let slice = vec.as_mut_slice();
         thread_rng().shuffle(slice);
 
@@ -154,6 +204,47 @@ mod tests {
         let mut n = 0;
         for i in bst.into_iter() {
             assert_eq!(i, n);
+            n += 1;
+        }
+    }
+
+    #[test]
+    fn test_into_iter_ref() {
+        let mut bst: BST<i32> = Default::default(); 
+        let mut vec: Vec<i32> = (0..100000).collect();
+        let slice = vec.as_mut_slice();
+        thread_rng().shuffle(slice);
+
+        for i in vec.into_iter() {
+            bst.insert(i);
+        }
+        let mut n = 0;
+        for i in (&bst).into_iter() {
+            assert_eq!(*i, n);
+            n += 1;
+        }
+    }
+
+    #[test]
+    fn test_into_iter_mut() {
+        let mut bst: BST<i32> = Default::default(); 
+        let mut vec: Vec<i32> = (0..100000).collect();
+        let slice = vec.as_mut_slice();
+        thread_rng().shuffle(slice);
+
+        for i in vec.into_iter() {
+            bst.insert(i);
+        }
+        let mut n = 0;
+        for i in (&mut bst).into_iter() {
+            assert_eq!(*i, n);
+            *i = *i + 10;
+            n += 1;
+        }
+
+        n = 10;
+        for i in (&bst).into_iter() {
+            assert_eq!(*i, n);
             n += 1;
         }
     }
