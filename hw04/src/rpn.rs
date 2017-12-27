@@ -1,3 +1,4 @@
+use rand::{thread_rng, Rng};
 use std::result;
 use std::io;
 
@@ -41,28 +42,85 @@ pub enum Op {
 }
 
 // TODO: Stack.
+pub struct Stack {
+    stack: Vec<Elt>,
+}
 
 // TODO: Result.
+pub type Result<T> = result::Result<T, Error>;
+
+type Pair = (Elt, Elt);
 
 impl Stack {
     /// Creates a new Stack
     pub fn new() -> Stack {
-        unimplemented!()
+        Stack{ stack: Vec::new() }
     }
 
     /// Pushes a value onto the stack.
     pub fn push(&mut self, val: Elt) -> Result<()> {
-        unimplemented!()
+        self.stack.push(val);
+        Ok(())
     }
 
     /// Tries to pop a value off of the stack.
     pub fn pop(&mut self) -> Result<Elt> {
-        unimplemented!()
+        match self.stack.pop() {
+            Some(val) => Ok(val),
+            None => Err(Error::Underflow),
+        }
+    }
+    
+    fn pop_two(&mut self) -> Result<Pair> {
+        let a = try!(self.pop());
+        let b = try!(self.pop());
+        Ok((a, b))
+    }
+
+    pub fn result(&mut self) -> Result<Elt> {
+        if self.stack.len() != 1 {
+            Err(Error::Syntax)
+        } else {
+            self.pop() 
+        }
     }
 
     /// Tries to evaluate an operator using values on the stack.
     pub fn eval(&mut self, op: Op) -> Result<()> {
-        unimplemented!()
+        use rpn::Elt::*;
+        match op {
+            Op::Add => {
+                match try!(self.pop_two()) {
+                    (Int(i), Int(j)) => self.push(Int(i + j)),
+                    _ => Err(Error::Type),
+                }
+            },
+            Op::Neg => {
+                match try!(self.pop()) {
+                    Int(i) => self.push(Int(-i)),
+                    Bool(b) => self.push(Bool(!b)),
+                }
+            }
+            Op::Eq => {
+                match try!(self.pop_two()) {
+                    (Int(i), Int(j)) => self.push(Bool(i == j)),
+                    (Bool(b), Bool(c)) => self.push(Bool(b == c)),
+                    _ => Err(Error::Type),
+                }
+            }
+            Op::Swap => {
+                let (a, b) = try!(self.pop_two());
+                let _ = self.push(a);
+                self.push(b)
+            }
+            Op::Rand => {
+                match try!(self.pop()) {
+                    Int(i) => self.push(Int(thread_rng().gen_range(0, i))),
+                    _ => Err(Error::Type),
+                }
+            }
+            Op::Quit => Err(Error::Quit),
+        }
     }
 }
 
